@@ -72,6 +72,8 @@
   .appt-detail .row{ display:flex; justify-content:space-between; padding:6px 0; font-size:0.9rem; border-bottom:1px dashed var(--brass-dim); }
   .appt-detail .row:last-of-type{ border-bottom:none; }
   .appt-detail .actions{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .appt-edit-form{ border:1px solid var(--brass-dim); background:var(--bg-card); padding:16px 18px; margin-top:10px; }
+  .appt-edit-form .form-grid{ margin-bottom:12px; }
 
   .range-buttons{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
   .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:26px; }
@@ -470,10 +472,93 @@ function showApptDetail(appt, dateStr){
           ? `<button class="btn btn-ghost btn-sm" onclick="unmarkPaid('${appt.payments[0].id}','${dateStr}')">Desfazer pagamento</button>`
           : `<button class="btn btn-primary btn-sm" onclick="markPaid('${appt.id}',${appt.services?.price_eur || 0},'${dateStr}')">Marcar como pago</button>`
         }
+        <button class="btn btn-ghost btn-sm" onclick="toggleApptEdit('${appt.id}','${dateStr}')">Alterar marcação</button>
         <button class="btn btn-ghost btn-sm" onclick="cancelAppointment('${appt.id}','${dateStr}')">Cancelar marcação</button>
       </div>
     </div>
+    <div id="appt-edit-area"></div>
   `;
+}
+
+function toggleApptEdit(appointmentId, dateStr){
+  const editArea = document.getElementById('appt-edit-area');
+  if (editArea.innerHTML.trim() !== '') {
+    editArea.innerHTML = '';
+    return;
+  }
+  const appt = currentAppointments.find(a => a.id === appointmentId);
+  if (!appt) return;
+
+  const start = new Date(appt.start_time);
+  const dateVal = start.toISOString().slice(0,10);
+  const timeVal = start.toTimeString().slice(0,5);
+
+  editArea.innerHTML = `
+    <div class="appt-edit-form">
+      <div class="form-grid">
+        <label>Barbeiro
+          <select id="edit-barber">
+            ${barbers.map(b => `<option value="${b.id}" ${b.id === appt.barber_id ? 'selected' : ''}>${b.name}</option>`).join('')}
+          </select>
+        </label>
+        <label>Data
+          <input type="date" id="edit-date" value="${dateVal}">
+        </label>
+        <label>Hora
+          <input type="time" id="edit-time" value="${timeVal}">
+        </label>
+      </div>
+      <div id="edit-msg"></div>
+      <div class="actions">
+        <button class="btn btn-primary btn-sm" onclick="saveApptChanges('${appt.id}','${dateStr}')">Guardar alterações</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('appt-edit-area').innerHTML=''">Cancelar edição</button>
+      </div>
+    </div>
+  `;
+}
+
+async function saveApptChanges(appointmentId, dateStr){
+  const msgEl = document.getElementById('edit-msg');
+  msgEl.innerHTML = '';
+
+  const appt = currentAppointments.find(a => a.id === appointmentId);
+  if (!appt) return;
+
+  const barberId = document.getElementById('edit-barber').value;
+  const dateVal = document.getElementById('edit-date').value;
+  const timeVal = document.getElementById('edit-time').value;
+  if (!dateVal || !timeVal) {
+    msgEl.innerHTML = '<div class="msg err">Escolhe data e hora.</div>';
+    return;
+  }
+
+  const durationMs = new Date(appt.end_time) - new Date(appt.start_time);
+  const newStart = new Date(`${dateVal}T${timeVal}:00`);
+  const newEnd = new Date(newStart.getTime() + durationMs);
+
+  // Confirma que não há sobreposição com outra marcação do mesmo barbeiro nesse dia.
+  const conflict = currentAppointments.some(a =>
+    a.id !== appointmentId &&
+    a.barber_id === barberId &&
+    newStart < new Date(a.end_time) &&
+    newEnd > new Date(a.start_time)
+  );
+  if (conflict && dateVal === dateStr) {
+    msgEl.innerHTML = '<div class="msg err">Esse barbeiro já tem uma marcação nesse horário.</div>';
+    return;
+  }
+
+  const { error } = await sb.from('appointments').update({
+    barber_id: barberId,
+    start_time: newStart.toISOString(),
+    end_time: newEnd.toISOString(),
+  }).eq('id', appointmentId);
+
+  if (error) { console.error(error); msgEl.innerHTML = '<div class="msg err">Erro ao guardar as alterações.</div>'; return; }
+
+  document.getElementById('appt-detail-area').innerHTML = '';
+  document.getElementById('agenda-date').value = dateVal;
+  loadAgenda(dateVal);
 }
 
 async function markPaid(appointmentId, price, dateStr){
