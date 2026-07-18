@@ -14,22 +14,26 @@
     --brass:#A9782E; --brass-dim:rgba(169,120,46,0.35);
     --primary:#2A1F15; --primary-hover:#43331F;
     --ok:#3F7A52; --err:#A8402F;
+    --pref-a:#7A8C6E;   /* preferência: barbeiro 1 */
+    --pref-b:#8E6B8F;   /* preferência: barbeiro 2 */
+    --pref-any:#B7AE95; /* sem preferência / qualquer barbeiro */
   }
   *{ box-sizing:border-box; }
   body{ margin:0; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',sans-serif; line-height:1.5; }
-  .wrap{ max-width:1000px; margin:0 auto; padding:24px 20px 80px; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:24px 20px 80px; }
   h1{ font-family:'Fraunces',serif; font-size:1.5rem; margin:0; }
   a.back{ color:var(--ink-muted); text-decoration:none; font-size:0.85rem; }
   .eyebrow{ font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.14em; font-size:0.68rem; color:var(--brass); }
-  .top-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .top-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:12px; }
+  .top-left{ display:flex; align-items:center; gap:12px; }
 
-  input, select{
+  input, select, textarea{
     padding:11px 13px; background:var(--bg-alt); border:1px solid var(--brass-dim); color:var(--ink);
     font-family:'IBM Plex Sans',sans-serif; font-size:0.95rem; border-radius:2px;
   }
-  input:focus, select:focus{ outline:2px solid var(--brass); outline-offset:1px; }
+  input:focus, select:focus, textarea:focus{ outline:2px solid var(--brass); outline-offset:1px; }
   label{ display:block; margin-bottom:14px; font-size:0.85rem; color:var(--ink-muted); }
-  label input, label select{ width:100%; margin-top:5px; }
+  label input, label select, label textarea{ width:100%; margin-top:5px; }
 
   .btn{ display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:2px; font-size:0.9rem; font-weight:500; border:1px solid transparent; cursor:pointer; text-decoration:none; }
   .btn-primary{ background:var(--primary); color:var(--bg); }
@@ -37,16 +41,45 @@
   .btn-primary:disabled{ opacity:0.4; cursor:not-allowed; }
   .btn-ghost{ background:transparent; border-color:var(--brass-dim); color:var(--ink); }
   .btn-ghost:hover{ border-color:var(--brass); }
+  .btn-danger{ background:transparent; border-color:var(--err); color:var(--err); }
+  .btn-danger:hover{ background:rgba(168,64,47,0.1); }
   .btn-sm{ padding:6px 12px; font-size:0.8rem; }
+  .btn-icon{ padding:8px 11px; font-size:1rem; line-height:1; }
 
   .login-card{ max-width:360px; margin:80px auto; border:1px solid var(--brass-dim); background:var(--bg-alt); padding:30px; }
   .login-card h2{ font-family:'Fraunces',serif; margin:0 0 18px; }
 
-  .tabs{ display:flex; gap:8px; margin-bottom:22px; border-bottom:1px solid var(--brass-dim); }
+  .hamburger-btn{ display:none; background:none; border:1px solid var(--brass-dim); border-radius:2px; padding:8px 11px; cursor:pointer; font-size:1.1rem; color:var(--ink); }
+  .sidebar-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:40; }
+  .sidebar-overlay.open{ display:block; }
+  .mobile-sidebar{
+    position:fixed; top:0; left:0; bottom:0; width:250px; background:var(--bg);
+    border-right:1px solid var(--brass-dim); z-index:50; padding:20px;
+    transform:translateX(-100%); transition:transform .2s ease;
+  }
+  .mobile-sidebar.open{ transform:translateX(0); }
+  .mobile-sidebar h3{ font-family:'Fraunces',serif; font-size:1.1rem; margin:0 0 20px; }
+  .mobile-nav-link{
+    display:block; width:100%; text-align:left; background:none; border:none; padding:12px 8px;
+    font-size:0.95rem; color:var(--ink); cursor:pointer; border-bottom:1px solid var(--brass-dim);
+  }
+  .mobile-nav-link.active{ color:var(--brass); font-weight:600; }
+
+  @media (max-width:760px){
+    .hamburger-btn{ display:inline-flex; }
+    .tabs{ display:none !important; }
+  }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:22px; border-bottom:1px solid var(--brass-dim); flex-wrap:wrap; }
   .tab-btn{ background:none; border:none; color:var(--ink-muted); font-family:'IBM Plex Mono',monospace; font-size:0.82rem; text-transform:uppercase; letter-spacing:0.08em; padding:10px 4px; cursor:pointer; border-bottom:2px solid transparent; margin-right:18px; }
   .tab-btn.active{ color:var(--ink); border-bottom-color:var(--brass); }
 
-  .cal-scroll{ overflow-x:auto; border:1px solid var(--brass-dim); background:var(--bg-alt); }
+  .cal-toolbar{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:12px; }
+  .zoom-controls{ display:flex; gap:6px; align-items:center; }
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; font-size:0.78rem; color:var(--ink-muted); align-items:center; }
+  .legend-swatch{ display:inline-block; width:12px; height:12px; border-radius:2px; margin-right:5px; vertical-align:middle; }
+
+  .cal-scroll{ overflow-x:auto; overflow-y:auto; max-height:70vh; border:1px solid var(--brass-dim); background:var(--bg-alt); }
   .cal-grid{ display:grid; min-width:480px; }
   .cal-header-row{ display:grid; grid-template-columns:56px repeat(var(--n-barbers,2), 1fr); border-bottom:1px solid var(--brass-dim); position:sticky; top:0; background:var(--bg-alt); z-index:2; }
   .cal-corner{ border-right:1px solid var(--brass-dim); }
@@ -62,20 +95,24 @@
   .cal-column:last-child{ border-right:none; }
   .cal-appt{
     position:absolute; left:3px; right:3px; overflow:hidden;
-    background:var(--brass); color:#fff; border-radius:2px; padding:4px 6px;
+    background:var(--pref-any); color:#fff; border-radius:2px; padding:4px 6px;
     font-size:0.72rem; line-height:1.25; cursor:pointer; border:1px solid rgba(0,0,0,0.15);
+    border-left-width:4px;
   }
-  .cal-appt.paid{ background:var(--ok); }
+  .cal-appt.pref-a{ background:var(--pref-a); }
+  .cal-appt.pref-b{ background:var(--pref-b); }
+  .cal-appt.pref-any{ background:var(--pref-any); }
+  .cal-appt.is-paid{ border-left-color:#2E5B3B; border-left-width:5px; }
   .cal-appt strong{ display:block; font-size:0.76rem; }
+  .cal-appt .tag{ opacity:0.9; font-size:0.66rem; }
 
   .appt-detail{ border:1px solid var(--brass-dim); background:var(--bg-alt); padding:16px 18px; margin-top:16px; }
   .appt-detail .row{ display:flex; justify-content:space-between; padding:6px 0; font-size:0.9rem; border-bottom:1px dashed var(--brass-dim); }
   .appt-detail .row:last-of-type{ border-bottom:none; }
   .appt-detail .actions{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
-  .appt-edit-form{ border:1px solid var(--brass-dim); background:var(--bg-card); padding:16px 18px; margin-top:10px; }
-  .appt-edit-form .form-grid{ margin-bottom:12px; }
 
-  .range-buttons{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .range-buttons{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end; }
+  .custom-range{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px; padding:14px; border:1px solid var(--brass-dim); background:var(--bg-alt); }
   .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:26px; }
   .stat-card{ border:1px solid var(--brass-dim); background:var(--bg-alt); padding:18px; }
   .stat-card .eyebrow{ display:block; margin-bottom:8px; }
@@ -85,7 +122,7 @@
   .client-avatar{ width:38px; height:38px; border-radius:50%; background:var(--bg-card); color:var(--brass); border:1px solid var(--brass-dim); display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; flex-shrink:0; }
   .client-name{ font-weight:500; }
   .client-meta{ color:var(--ink-muted); font-size:0.82rem; margin-top:2px; }
-  .client-visits{ margin-left:auto; color:var(--ink-muted); font-size:0.82rem; white-space:nowrap; }
+  .client-visits{ margin-left:auto; color:var(--ink-muted); font-size:0.82rem; white-space:nowrap; text-align:right; }
 
   .msg{ font-size:0.85rem; padding:10px 12px; border-radius:2px; margin:10px 0; }
   .msg.err{ background:rgba(168,64,47,0.12); color:var(--err); border:1px solid var(--err); }
@@ -97,11 +134,26 @@
 </style>
 </head>
 <body>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="mobile-sidebar" id="mobile-sidebar">
+  <h3>Menu</h3>
+  <button class="mobile-nav-link active" data-tab="agenda" onclick="switchTab('agenda')">Agenda</button>
+  <button class="mobile-nav-link" data-tab="relatorios" onclick="switchTab('relatorios')">Relatórios</button>
+  <button class="mobile-nav-link" data-tab="clientes" onclick="switchTab('clientes')">Clientes</button>
+  <button class="mobile-nav-link" data-tab="assinantes" onclick="switchTab('assinantes')">Assinantes</button>
+  <button class="mobile-nav-link" data-tab="catalogo" onclick="switchTab('catalogo')">Catálogo</button>
+  <button class="mobile-nav-link" data-tab="marketing" onclick="switchTab('marketing')">Marketing</button>
+  <button class="mobile-nav-link" onclick="logout()" style="margin-top:20px; color:var(--err);">Sair</button>
+</div>
+
 <div class="wrap">
   <div class="top-row">
-    <div>
-      <a class="back" href="index.html">&larr; The Classic House Barbearia</a>
-      <h1 style="margin-top:6px;">Gestão</h1>
+    <div class="top-left">
+      <button class="hamburger-btn" onclick="openSidebar()">☰</button>
+      <div>
+        <a class="back" href="index.html">&larr; The Classic House Barbearia</a>
+        <h1 style="margin-top:6px;">Gestão</h1>
+      </div>
     </div>
     <button class="btn btn-ghost hidden" id="logout-btn" onclick="logout()">Sair</button>
   </div>
@@ -131,7 +183,6 @@
     </p>
   </div>
 
-  <!-- Formulário para definir nova password, aparece só quando se vem do link de recuperação -->
   <div class="login-card hidden" id="reset-password-view">
     <h2>Nova password</h2>
     <label>Nova password
@@ -148,12 +199,21 @@
       <button class="tab-btn" data-tab="clientes" onclick="switchTab('clientes')">Clientes</button>
       <button class="tab-btn" data-tab="assinantes" onclick="switchTab('assinantes')">Assinantes</button>
       <button class="tab-btn" data-tab="catalogo" onclick="switchTab('catalogo')">Catálogo</button>
+      <button class="tab-btn" data-tab="marketing" onclick="switchTab('marketing')">Marketing</button>
     </div>
 
     <section id="tab-agenda">
-      <label style="max-width:220px;">Dia
-        <input type="date" id="agenda-date">
-      </label>
+      <div class="cal-toolbar">
+        <label style="max-width:220px; margin-bottom:0;">Dia
+          <input type="date" id="agenda-date">
+        </label>
+        <div class="zoom-controls">
+          <span class="eyebrow">Zoom</span>
+          <button class="btn btn-ghost btn-icon" onclick="changeZoom(-0.2)">−</button>
+          <button class="btn btn-ghost btn-icon" onclick="changeZoom(0.2)">+</button>
+        </div>
+      </div>
+
       <button class="btn btn-ghost btn-sm" id="toggle-manual-btn" onclick="toggleManualForm()" style="margin-bottom:16px;">+ Nova marcação manual</button>
 
       <div class="manual-form hidden" id="manual-form">
@@ -173,10 +233,18 @@
           <label>Telemóvel
             <input type="tel" id="manual-phone">
           </label>
+          <label>Preferência
+            <select id="manual-preference">
+              <option value="specific">Cliente pediu este barbeiro</option>
+              <option value="any">Sem preferência (qualquer barbeiro)</option>
+            </select>
+          </label>
         </div>
         <div id="manual-msg"></div>
         <button class="btn btn-primary" onclick="submitManualAppointment()">Adicionar</button>
       </div>
+
+      <div class="legend" id="legend"></div>
 
       <div id="calendar-area">A carregar…</div>
       <div id="appt-detail-area"></div>
@@ -188,10 +256,35 @@
         <button class="btn btn-ghost btn-sm" onclick="loadReport('semana')">Esta semana</button>
         <button class="btn btn-ghost btn-sm" onclick="loadReport('mes')">Este mês</button>
       </div>
+      <div class="custom-range">
+        <label style="margin-bottom:0;">De
+          <input type="date" id="report-start-date">
+        </label>
+        <label style="margin-bottom:0;">Até
+          <input type="date" id="report-end-date">
+        </label>
+        <button class="btn btn-primary btn-sm" onclick="loadCustomReport()">Aplicar</button>
+      </div>
       <div id="report-area">Escolhe um período acima.</div>
     </section>
 
     <section id="tab-clientes" class="hidden">
+      <button class="btn btn-ghost btn-sm" id="toggle-client-form-btn" onclick="toggleClientForm()" style="margin-bottom:16px;">+ Adicionar cliente</button>
+      <div class="manual-form hidden" id="client-form">
+        <div class="form-grid">
+          <label>Nome
+            <input type="text" id="new-client-name">
+          </label>
+          <label>Telemóvel
+            <input type="tel" id="new-client-phone">
+          </label>
+          <label>Email (opcional)
+            <input type="email" id="new-client-email">
+          </label>
+        </div>
+        <div id="new-client-msg"></div>
+        <button class="btn btn-primary" onclick="submitNewClient()">Adicionar cliente</button>
+      </div>
       <div id="clients-list">A carregar…</div>
     </section>
 
@@ -207,6 +300,9 @@
           </label>
           <label>Plano / Serviço
             <select id="sub-service"></select>
+          </label>
+          <label>Serviços incluídos
+            <input type="number" id="sub-total-services" value="4" min="1">
           </label>
           <label>Início
             <input type="date" id="sub-start-date">
@@ -243,6 +339,23 @@
       </div>
       <div id="catalog-list">A carregar…</div>
     </section>
+
+    <section id="tab-marketing" class="hidden">
+      <p style="color:var(--ink-muted); font-size:0.88rem; max-width:560px;">
+        Envia um email a todos os clientes com email registado. Isto precisa de teres ligado o envio de emails (Resend) no Supabase — ver README, secção "Fase 2".
+      </p>
+      <div class="manual-form" style="margin-top:16px;">
+        <label>Assunto
+          <input type="text" id="mkt-subject" placeholder="Ex: Promoção de agosto na The Classic House">
+        </label>
+        <label>Mensagem
+          <textarea id="mkt-body" rows="8" placeholder="Escreve aqui a tua mensagem..."></textarea>
+        </label>
+        <div id="mkt-audience-count" style="color:var(--ink-muted); font-size:0.85rem; margin-bottom:12px;"></div>
+        <div id="mkt-msg"></div>
+        <button class="btn btn-primary" onclick="sendMarketingCampaign()">Enviar campanha</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -253,19 +366,24 @@ const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE
 
 const CAL_START_HOUR = 8;
 const CAL_END_HOUR = 20;
-const PX_PER_MIN = 1;
+let calZoom = 1;
 
 let services = [], barbers = [], currentAppointments = [];
+
+function openSidebar(){
+  document.getElementById('mobile-sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+}
+function closeSidebar(){
+  document.getElementById('mobile-sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
 
 async function login(){
   const msgEl = document.getElementById('login-msg');
   msgEl.innerHTML = '';
   if (!sb) {
     msgEl.innerHTML = `<div class="msg err">Não consegui carregar a biblioteca do Supabase. Verifica a ligação à internet ou bloqueadores de anúncios.</div>`;
-    return;
-  }
-  if (SUPABASE_URL.includes('COLOCA_AQUI') || SUPABASE_ANON_KEY.includes('COLOCA_AQUI')) {
-    msgEl.innerHTML = `<div class="msg err">Este painel ainda não está ligado ao Supabase. Troca o SUPABASE_URL e a SUPABASE_ANON_KEY no início do ficheiro.</div>`;
     return;
   }
   const email = document.getElementById('login-email').value.trim();
@@ -277,6 +395,7 @@ async function login(){
 
 async function logout(){
   await sb.auth.signOut();
+  closeSidebar();
   document.getElementById('login-view').classList.remove('hidden');
   document.getElementById('dashboard-view').classList.add('hidden');
   document.getElementById('logout-btn').classList.add('hidden');
@@ -310,9 +429,6 @@ async function updatePassword(){
   }, 1200);
 }
 
-// Quando se vem do link de recuperação de password, o Supabase acrescenta
-// "#access_token=...&type=recovery" ao URL — detetamos isso e mostramos
-// diretamente o formulário de nova password.
 if (sb) {
   sb.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') {
@@ -345,6 +461,7 @@ async function showDashboard(){
   }
 
   document.documentElement.style.setProperty('--n-barbers', barbers.length);
+  renderLegend();
 
   const dateInput = document.getElementById('agenda-date');
   dateInput.value = new Date().toISOString().slice(0,10);
@@ -361,31 +478,62 @@ async function showDashboard(){
   document.getElementById('sub-start-date').value = new Date().toISOString().slice(0,10);
   const in30 = new Date(); in30.setDate(in30.getDate()+30);
   document.getElementById('sub-end-date').value = in30.toISOString().slice(0,10);
+
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('report-start-date').value = today;
+  document.getElementById('report-end-date').value = today;
 }
 
 function euro(v){ return v === null || v === undefined ? 'a confirmar' : `€ ${Number(v).toFixed(0)}`; }
 
 function switchTab(tab){
-  ['agenda','relatorios','clientes','assinantes','catalogo'].forEach(t => {
+  ['agenda','relatorios','clientes','assinantes','catalogo','marketing'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
-    document.querySelector(`.tab-btn[data-tab="${t}"]`).classList.toggle('active', t === tab);
+    const topBtn = document.querySelector(`.tab-btn[data-tab="${t}"]`);
+    if (topBtn) topBtn.classList.toggle('active', t === tab);
+    const sideBtn = document.querySelector(`.mobile-nav-link[data-tab="${t}"]`);
+    if (sideBtn) sideBtn.classList.toggle('active', t === tab);
   });
   if (tab === 'clientes') loadClients();
   if (tab === 'assinantes') loadSubscriptions();
   if (tab === 'catalogo') loadCatalog();
+  if (tab === 'marketing') loadMarketingAudienceCount();
+  closeSidebar();
 }
 
-function toggleManualForm(){
-  document.getElementById('manual-form').classList.toggle('hidden');
+function toggleManualForm(){ document.getElementById('manual-form').classList.toggle('hidden'); }
+
+function renderLegend(){
+  const legendEl = document.getElementById('legend');
+  const b0 = barbers[0]?.name || 'Barbeiro 1';
+  const b1 = barbers[1]?.name || 'Barbeiro 2';
+  legendEl.innerHTML = `
+    <span><span class="legend-swatch" style="background:var(--pref-a);"></span>Prefere ${b0}</span>
+    <span><span class="legend-swatch" style="background:var(--pref-b);"></span>Prefere ${b1}</span>
+    <span><span class="legend-swatch" style="background:var(--pref-any);"></span>Qualquer barbeiro</span>
+    <span>▍ verde à esquerda = pago</span>
+  `;
+}
+
+function preferenceClassFor(appt){
+  if (appt.barber_preference !== 'specific') return 'pref-any';
+  const idx = barbers.findIndex(b => b.id === appt.barber_id);
+  return idx === 0 ? 'pref-a' : 'pref-b';
+}
+
+function changeZoom(delta){
+  calZoom = Math.max(0.5, Math.min(2, Math.round((calZoom + delta) * 10) / 10));
+  loadAgenda(document.getElementById('agenda-date').value);
 }
 
 function buildCalendarSkeleton(){
+  const pxPerMin = calZoom;
   const totalMinutes = (CAL_END_HOUR - CAL_START_HOUR) * 60;
-  const totalHeight = totalMinutes * PX_PER_MIN;
+  const totalHeight = totalMinutes * pxPerMin;
 
   let gutterHtml = `<div class="cal-gutter" style="height:${totalHeight}px;">`;
   for (let h = CAL_START_HOUR; h <= CAL_END_HOUR; h++) {
-    const top = (h - CAL_START_HOUR) * 60 * PX_PER_MIN;
+    const top = (h - CAL_START_HOUR) * 60 * pxPerMin;
     gutterHtml += `<div class="cal-gutter-label" style="top:${top}px;">${String(h).padStart(2,'0')}:00</div>`;
   }
   gutterHtml += `</div>`;
@@ -427,6 +575,7 @@ async function loadAgenda(dateStr){
   if (error) { areaEl.innerHTML = `<div class="msg err">Erro a carregar a agenda.</div>`; console.error(error); return; }
 
   currentAppointments = data || [];
+  const pxPerMin = calZoom;
 
   currentAppointments.forEach(appt => {
     const col = areaEl.querySelector(`.cal-column[data-barber-id="${appt.barber_id}"]`);
@@ -438,11 +587,12 @@ async function loadAgenda(dateStr){
     const isPaid = appt.payments && appt.payments.length > 0;
 
     const block = document.createElement('div');
-    block.className = 'cal-appt' + (isPaid ? ' paid' : '');
-    block.style.top = (startMin * PX_PER_MIN) + 'px';
-    block.style.height = Math.max(durMin * PX_PER_MIN - 2, 16) + 'px';
+    block.className = `cal-appt ${preferenceClassFor(appt)} ${isPaid ? 'is-paid' : ''}`;
+    block.style.top = (startMin * pxPerMin) + 'px';
+    block.style.height = Math.max(durMin * pxPerMin - 2, 16) + 'px';
     const timeLabel = start.toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit' });
-    block.innerHTML = `<strong>${timeLabel} ${appt.clients?.name || 'Cliente'}</strong>${appt.services?.name?.split('|')[0].trim() || ''}`;
+    const subTag = appt.subscription_id ? `<span class="tag">Ass.</span> ` : '';
+    block.innerHTML = `<strong>${timeLabel} ${appt.clients?.name || 'Cliente'}</strong>${subTag}${appt.services?.name?.split('|')[0].trim() || ''}`;
     block.addEventListener('click', () => showApptDetail(appt, dateStr));
     col.appendChild(block);
   });
@@ -465,100 +615,18 @@ function showApptDetail(appt, dateStr){
       <div class="row"><span>Cliente</span><span>${appt.clients?.name || ''} · ${appt.clients?.phone || ''}</span></div>
       <div class="row"><span>Serviço</span><span>${appt.services?.name?.split('|')[0].trim() || ''}</span></div>
       <div class="row"><span>Barbeiro</span><span>${appt.barbers?.name || ''}</span></div>
+      <div class="row"><span>Preferência</span><span>${appt.barber_preference === 'specific' ? 'Pediu este barbeiro' : 'Qualquer barbeiro'}</span></div>
       <div class="row"><span>Hora</span><span>${time}</span></div>
-      <div class="row"><span>Preço</span><span>${euro(appt.services?.price_eur)}</span></div>
+      <div class="row"><span>Preço</span><span>${appt.subscription_id ? 'Coberto pela assinatura' : euro(appt.services?.price_eur)}</span></div>
       <div class="actions">
         ${isPaid
           ? `<button class="btn btn-ghost btn-sm" onclick="unmarkPaid('${appt.payments[0].id}','${dateStr}')">Desfazer pagamento</button>`
           : `<button class="btn btn-primary btn-sm" onclick="markPaid('${appt.id}',${appt.services?.price_eur || 0},'${dateStr}')">Marcar como pago</button>`
         }
-        <button class="btn btn-ghost btn-sm" onclick="toggleApptEdit('${appt.id}','${dateStr}')">Alterar marcação</button>
         <button class="btn btn-ghost btn-sm" onclick="cancelAppointment('${appt.id}','${dateStr}')">Cancelar marcação</button>
       </div>
     </div>
-    <div id="appt-edit-area"></div>
   `;
-}
-
-function toggleApptEdit(appointmentId, dateStr){
-  const editArea = document.getElementById('appt-edit-area');
-  if (editArea.innerHTML.trim() !== '') {
-    editArea.innerHTML = '';
-    return;
-  }
-  const appt = currentAppointments.find(a => a.id === appointmentId);
-  if (!appt) return;
-
-  const start = new Date(appt.start_time);
-  const dateVal = start.toISOString().slice(0,10);
-  const timeVal = start.toTimeString().slice(0,5);
-
-  editArea.innerHTML = `
-    <div class="appt-edit-form">
-      <div class="form-grid">
-        <label>Barbeiro
-          <select id="edit-barber">
-            ${barbers.map(b => `<option value="${b.id}" ${b.id === appt.barber_id ? 'selected' : ''}>${b.name}</option>`).join('')}
-          </select>
-        </label>
-        <label>Data
-          <input type="date" id="edit-date" value="${dateVal}">
-        </label>
-        <label>Hora
-          <input type="time" id="edit-time" value="${timeVal}">
-        </label>
-      </div>
-      <div id="edit-msg"></div>
-      <div class="actions">
-        <button class="btn btn-primary btn-sm" onclick="saveApptChanges('${appt.id}','${dateStr}')">Guardar alterações</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('appt-edit-area').innerHTML=''">Cancelar edição</button>
-      </div>
-    </div>
-  `;
-}
-
-async function saveApptChanges(appointmentId, dateStr){
-  const msgEl = document.getElementById('edit-msg');
-  msgEl.innerHTML = '';
-
-  const appt = currentAppointments.find(a => a.id === appointmentId);
-  if (!appt) return;
-
-  const barberId = document.getElementById('edit-barber').value;
-  const dateVal = document.getElementById('edit-date').value;
-  const timeVal = document.getElementById('edit-time').value;
-  if (!dateVal || !timeVal) {
-    msgEl.innerHTML = '<div class="msg err">Escolhe data e hora.</div>';
-    return;
-  }
-
-  const durationMs = new Date(appt.end_time) - new Date(appt.start_time);
-  const newStart = new Date(`${dateVal}T${timeVal}:00`);
-  const newEnd = new Date(newStart.getTime() + durationMs);
-
-  // Confirma que não há sobreposição com outra marcação do mesmo barbeiro nesse dia.
-  const conflict = currentAppointments.some(a =>
-    a.id !== appointmentId &&
-    a.barber_id === barberId &&
-    newStart < new Date(a.end_time) &&
-    newEnd > new Date(a.start_time)
-  );
-  if (conflict && dateVal === dateStr) {
-    msgEl.innerHTML = '<div class="msg err">Esse barbeiro já tem uma marcação nesse horário.</div>';
-    return;
-  }
-
-  const { error } = await sb.from('appointments').update({
-    barber_id: barberId,
-    start_time: newStart.toISOString(),
-    end_time: newEnd.toISOString(),
-  }).eq('id', appointmentId);
-
-  if (error) { console.error(error); msgEl.innerHTML = '<div class="msg err">Erro ao guardar as alterações.</div>'; return; }
-
-  document.getElementById('appt-detail-area').innerHTML = '';
-  document.getElementById('agenda-date').value = dateVal;
-  loadAgenda(dateVal);
 }
 
 async function markPaid(appointmentId, price, dateStr){
@@ -587,6 +655,7 @@ async function submitManualAppointment(){
   const datetime = document.getElementById('manual-datetime').value;
   const name = document.getElementById('manual-name').value.trim();
   const phone = document.getElementById('manual-phone').value.trim();
+  const preference = document.getElementById('manual-preference').value;
   const msgEl = document.getElementById('manual-msg');
   msgEl.innerHTML = '';
 
@@ -607,6 +676,7 @@ async function submitManualAppointment(){
       p_client_name: name,
       p_client_phone: phone,
       p_client_email: null,
+      p_barber_preference: preference,
     });
     if (error) throw error;
 
@@ -642,6 +712,20 @@ function rangeDates(kind){
 
 async function loadReport(kind){
   const [start, end, label] = rangeDates(kind);
+  await runReport(start, end, label);
+}
+
+async function loadCustomReport(){
+  const startStr = document.getElementById('report-start-date').value;
+  const endStr = document.getElementById('report-end-date').value;
+  if (!startStr || !endStr) { document.getElementById('report-area').innerHTML = '<div class="msg err">Escolhe as duas datas.</div>'; return; }
+  const start = new Date(startStr + 'T00:00:00');
+  const end = new Date(endStr + 'T23:59:59');
+  const label = `${new Date(startStr+'T00:00:00').toLocaleDateString('pt-PT')} — ${new Date(endStr+'T00:00:00').toLocaleDateString('pt-PT')}`;
+  await runReport(start, end, label);
+}
+
+async function runReport(start, end, label){
   const areaEl = document.getElementById('report-area');
   areaEl.innerHTML = 'A calcular…';
 
@@ -676,6 +760,34 @@ async function loadReport(kind){
   `;
 }
 
+function toggleClientForm(){ document.getElementById('client-form').classList.toggle('hidden'); }
+
+async function submitNewClient(){
+  const name = document.getElementById('new-client-name').value.trim();
+  const phone = document.getElementById('new-client-phone').value.trim();
+  const email = document.getElementById('new-client-email').value.trim();
+  const msgEl = document.getElementById('new-client-msg');
+  msgEl.innerHTML = '';
+
+  if (!name || !phone) { msgEl.innerHTML = '<div class="msg err">Preenche o nome e o telemóvel.</div>'; return; }
+
+  const { error } = await sb.from('clients').insert({ name, phone, email: email || null });
+  if (error) { msgEl.innerHTML = '<div class="msg err">Erro ao adicionar. O telemóvel já pode estar registado.</div>'; console.error(error); return; }
+
+  document.getElementById('new-client-name').value = '';
+  document.getElementById('new-client-phone').value = '';
+  document.getElementById('new-client-email').value = '';
+  toggleClientForm();
+  loadClients();
+}
+
+async function removeClient(clientId){
+  if (!confirm('Remover este cliente? O histórico de marcações mantém-se, mas deixa de estar ligado a um nome.')) return;
+  const { error } = await sb.from('clients').delete().eq('id', clientId);
+  if (error) { alert('Erro ao remover o cliente.'); console.error(error); return; }
+  loadClients();
+}
+
 async function loadClients(){
   const listEl = document.getElementById('clients-list');
   listEl.innerHTML = 'A carregar…';
@@ -691,23 +803,23 @@ async function loadClients(){
   listEl.innerHTML = clients.map(c => `
     <div class="client-row">
       <div class="client-avatar">${(c.name||'?').charAt(0).toUpperCase()}</div>
-      <div>
+      <div style="flex:1;">
         <div class="client-name">${c.name}</div>
         <div class="client-meta">${c.phone}${c.email ? ' · ' + c.email : ''}</div>
       </div>
       <div class="client-visits">${visitCounts[c.id] || 0} marcações</div>
+      <button class="btn btn-danger btn-sm" onclick="removeClient('${c.id}')">Remover</button>
     </div>
   `).join('');
 }
 
-function toggleSubForm(){
-  document.getElementById('sub-form').classList.toggle('hidden');
-}
+function toggleSubForm(){ document.getElementById('sub-form').classList.toggle('hidden'); }
 
 async function submitSubscription(){
   const name = document.getElementById('sub-client-name').value.trim();
   const phone = document.getElementById('sub-client-phone').value.trim();
   const serviceId = document.getElementById('sub-service').value;
+  const totalServices = parseInt(document.getElementById('sub-total-services').value, 10) || 1;
   const startDate = document.getElementById('sub-start-date').value;
   const endDate = document.getElementById('sub-end-date').value;
   const msgEl = document.getElementById('sub-msg');
@@ -727,7 +839,7 @@ async function submitSubscription(){
       clientId = created.id;
     }
     const { error: subErr } = await sb.from('subscriptions').insert({
-      client_id: clientId, service_id: serviceId, start_date: startDate, end_date: endDate,
+      client_id: clientId, service_id: serviceId, start_date: startDate, end_date: endDate, total_services: totalServices,
     });
     if (subErr) throw subErr;
 
@@ -737,7 +849,7 @@ async function submitSubscription(){
     loadSubscriptions();
   } catch (err) {
     console.error(err);
-    msgEl.innerHTML = '<div class="msg err">Erro ao adicionar a assinatura. Confirma se já correste a migration_02_features.sql no Supabase.</div>';
+    msgEl.innerHTML = '<div class="msg err">Erro ao adicionar a assinatura. Confirma se já correste a migration_03_advanced.sql no Supabase.</div>';
   }
 }
 
@@ -750,22 +862,28 @@ async function loadSubscriptions(){
     .order('end_date', { ascending: true });
 
   if (error) {
-    listEl.innerHTML = `<div class="msg err">Não consegui carregar assinantes. Confirma se já correste a migration_02_features.sql no Supabase.</div>`;
+    listEl.innerHTML = `<div class="msg err">Não consegui carregar assinantes. Confirma se já correste a migration_03_advanced.sql no Supabase.</div>`;
     console.error(error);
     return;
   }
   if (!data || data.length === 0) { listEl.innerHTML = '<p style="color:var(--ink-muted);">Ainda não há assinantes registados.</p>'; return; }
 
+  const { data: usageRows } = await sb.from('appointments').select('subscription_id').neq('status','cancelled').not('subscription_id','is',null);
+  const usageCounts = {};
+  (usageRows||[]).forEach(r => { usageCounts[r.subscription_id] = (usageCounts[r.subscription_id]||0) + 1; });
+
   const today = new Date().toISOString().slice(0,10);
   listEl.innerHTML = data.map(s => {
     const isActive = s.end_date >= today;
+    const used = usageCounts[s.id] || 0;
     return `
       <div class="client-row">
         <div class="client-avatar">${(s.clients?.name||'?').charAt(0).toUpperCase()}</div>
-        <div>
+        <div style="flex:1;">
           <div class="client-name">${s.clients?.name || ''}</div>
           <div class="client-meta">${s.services?.name?.split('|')[0].trim() || ''} · ${s.clients?.phone || ''}</div>
-          <div class="client-meta">Validade: ${new Date(s.end_date+'T00:00:00').toLocaleDateString('pt-PT')}</div>
+          <div class="client-meta">Usados: ${used} de ${s.total_services} · Validade: ${new Date(s.end_date+'T00:00:00').toLocaleDateString('pt-PT')}</div>
+          <div class="client-meta">Código de acesso: <strong>${s.access_code}</strong></div>
         </div>
         <div class="client-visits" style="color:${isActive ? 'var(--ok)' : 'var(--err)'};">${isActive ? 'Ativo' : 'Expirado'}</div>
       </div>
@@ -773,9 +891,7 @@ async function loadSubscriptions(){
   }).join('');
 }
 
-function toggleServiceForm(){
-  document.getElementById('service-form').classList.toggle('hidden');
-}
+function toggleServiceForm(){ document.getElementById('service-form').classList.toggle('hidden'); }
 
 async function submitNewService(){
   const name = document.getElementById('new-service-name').value.trim();
@@ -837,6 +953,35 @@ async function toggleServiceActive(serviceId, currentlyActive){
   const { error } = await sb.from('services').update({ active: !currentlyActive }).eq('id', serviceId);
   if (error) { alert('Erro ao atualizar o serviço.'); console.error(error); return; }
   loadCatalog();
+}
+
+async function loadMarketingAudienceCount(){
+  const countEl = document.getElementById('mkt-audience-count');
+  const { count, error } = await sb.from('clients').select('id', { count: 'exact', head: true }).not('email', 'is', null);
+  if (error) { countEl.textContent = ''; return; }
+  countEl.textContent = `Vai ser enviado a ${count || 0} cliente(s) com email registado.`;
+}
+
+async function sendMarketingCampaign(){
+  const subject = document.getElementById('mkt-subject').value.trim();
+  const body = document.getElementById('mkt-body').value.trim();
+  const msgEl = document.getElementById('mkt-msg');
+  msgEl.innerHTML = '';
+
+  if (!subject || !body) { msgEl.innerHTML = '<div class="msg err">Preenche o assunto e a mensagem.</div>'; return; }
+  if (!confirm('Enviar esta campanha para todos os clientes com email registado?')) return;
+
+  msgEl.innerHTML = '<div class="msg">A enviar…</div>';
+  try {
+    const { data, error } = await sb.functions.invoke('send-marketing', {
+      body: { subject, html: `<div style="font-family:sans-serif; max-width:480px; margin:0 auto;">${body.replace(/\n/g,'<br>')}</div>` },
+    });
+    if (error) throw error;
+    msgEl.innerHTML = `<div class="msg ok">Campanha enviada!</div>`;
+  } catch (err) {
+    console.error(err);
+    msgEl.innerHTML = '<div class="msg err">Não foi possível enviar. Confirma se já publicaste a função send-marketing e ligaste o Resend (ver README, Fase 2).</div>';
+  }
 }
 
 if (sb) {

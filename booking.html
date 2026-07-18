@@ -93,6 +93,18 @@
       <button class="btn btn-ghost" onclick="lookupMyBookings()">Procurar</button>
       <div id="my-bookings-results" style="margin-top:14px;"></div>
     </div>
+
+    <button class="btn btn-ghost btn-sm-toggle" id="my-sub-toggle" onclick="toggleMySubscription()" style="font-size:0.85rem; padding:9px 16px; margin-top:8px;">És assinante? Acede à tua área</button>
+    <div id="my-sub-panel" class="hidden" style="margin-top:14px; border:1px solid var(--brass-dim); background:var(--bg-alt); padding:16px 18px;">
+      <label>O teu telemóvel
+        <input type="tel" id="sub-phone-input" placeholder="9xx xxx xxx">
+      </label>
+      <label>Código de acesso
+        <input type="text" id="sub-code-input" placeholder="código que recebeste da barbearia">
+      </label>
+      <button class="btn btn-ghost" onclick="lookupMySubscription()">Aceder</button>
+      <div id="my-sub-results" style="margin-top:14px;"></div>
+    </div>
   </div>
 
   <div class="steps">
@@ -191,6 +203,38 @@ function fmtDuration(mins){ return mins >= 60 ? `${(mins/60).toFixed(mins%60===0
 
 function toggleMyBookings(){
   document.getElementById('my-bookings-panel').classList.toggle('hidden');
+}
+
+function toggleMyBookings(){
+  document.getElementById('my-bookings-panel').classList.toggle('hidden');
+}
+
+function toggleMySubscription(){
+  document.getElementById('my-sub-panel').classList.toggle('hidden');
+}
+
+async function lookupMySubscription(){
+  const phone = document.getElementById('sub-phone-input').value.trim();
+  const code = document.getElementById('sub-code-input').value.trim();
+  const resultsEl = document.getElementById('my-sub-results');
+  resultsEl.innerHTML = 'A procurar…';
+  if (!sb || !phone || !code) { resultsEl.innerHTML = '<div class="msg err">Escreve o telemóvel e o código de acesso.</div>'; return; }
+
+  const { data, error } = await sb.rpc('get_my_subscription', { p_phone: phone, p_access_code: code });
+  if (error) { resultsEl.innerHTML = '<div class="msg err">Erro ao procurar. Tenta novamente.</div>'; console.error(error); return; }
+  if (!data || data.length === 0) { resultsEl.innerHTML = '<p style="color:var(--ink-muted); font-size:0.9rem;">Não encontrei nenhuma assinatura com este telemóvel e código.</p>'; return; }
+
+  const sub = data[0];
+  const remaining = sub.total_services - sub.used_services;
+  const expiryFmt = new Date(sub.end_date+'T00:00:00').toLocaleDateString('pt-PT');
+  const isExpired = new Date(sub.end_date) < new Date(new Date().toDateString());
+
+  resultsEl.innerHTML = `
+    <div class="summary-row"><span>Plano</span><span>${sub.service_name ? sub.service_name.split('|')[0].trim() : ''}</span></div>
+    <div class="summary-row"><span>Serviços usados</span><span>${sub.used_services} de ${sub.total_services}</span></div>
+    <div class="summary-row"><span>Por usar</span><span>${remaining > 0 ? remaining : 0}</span></div>
+    <div class="summary-row"><span>Validade</span><span style="color:${isExpired ? 'var(--err)' : 'var(--ok)'};">${expiryFmt}${isExpired ? ' (expirado)' : ''}</span></div>
+  `;
 }
 
 async function lookupMyBookings(){
@@ -457,6 +501,7 @@ async function submitBooking(){
       p_client_name: name,
       p_client_phone: phone,
       p_client_email: email || null,
+      p_barber_preference: state.selectedBarber ? 'specific' : 'any',
     });
     if (error) throw error;
     showSuccess(name);
