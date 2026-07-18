@@ -83,6 +83,18 @@
 <div class="wrap">
   <a class="back" href="index.html">&larr; The Classic House Barbearia</a>
   <h1 style="margin-top:8px;">Marcar horário</h1>
+
+  <div style="margin:16px 0 24px;">
+    <button class="btn btn-ghost btn-sm-toggle" id="my-bookings-toggle" onclick="toggleMyBookings()" style="font-size:0.85rem; padding:9px 16px;">Já tens marcação? Ver ou cancelar</button>
+    <div id="my-bookings-panel" class="hidden" style="margin-top:14px; border:1px solid var(--brass-dim); background:var(--bg-alt); padding:16px 18px;">
+      <label>O teu telemóvel
+        <input type="tel" id="my-phone-input" placeholder="9xx xxx xxx">
+      </label>
+      <button class="btn btn-ghost" onclick="lookupMyBookings()">Procurar</button>
+      <div id="my-bookings-results" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
   <div class="steps">
     <div class="step-dot" data-step="1"></div>
     <div class="step-dot" data-step="2"></div>
@@ -176,6 +188,50 @@ const state = {
 
 function euro(v){ return v === null || v === undefined ? 'a confirmar' : `€ ${Number(v).toFixed(0)}`; }
 function fmtDuration(mins){ return mins >= 60 ? `${(mins/60).toFixed(mins%60===0?0:1)} h` : `${mins} min`; }
+
+function toggleMyBookings(){
+  document.getElementById('my-bookings-panel').classList.toggle('hidden');
+}
+
+async function lookupMyBookings(){
+  const phone = document.getElementById('my-phone-input').value.trim();
+  const resultsEl = document.getElementById('my-bookings-results');
+  resultsEl.innerHTML = 'A procurar…';
+  if (!sb || !phone) { resultsEl.innerHTML = '<div class="msg err">Escreve o teu telemóvel.</div>'; return; }
+
+  const { data, error } = await sb.rpc('list_my_appointments', { p_phone: phone });
+  if (error) { resultsEl.innerHTML = '<div class="msg err">Erro ao procurar. Tenta novamente.</div>'; console.error(error); return; }
+  if (!data || data.length === 0) { resultsEl.innerHTML = '<p style="color:var(--ink-muted); font-size:0.9rem;">Não encontrei marcações futuras com este telemóvel.</p>'; return; }
+
+  resultsEl.innerHTML = '';
+  data.forEach(appt => {
+    const dt = new Date(appt.start_time);
+    const dateFmt = dt.toLocaleDateString('pt-PT', { weekday:'short', day:'numeric', month:'short' });
+    const timeFmt = dt.toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit' });
+    const row = document.createElement('div');
+    row.className = 'card';
+    row.innerHTML = `
+      <div class="card-row">
+        <div>
+          <div class="card-name">${appt.service_name ? appt.service_name.split('|')[0].trim() : ''}</div>
+          <div class="card-meta">${dateFmt}, ${timeFmt} — ${appt.barber_name || ''}</div>
+        </div>
+      </div>
+    `;
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-ghost btn-sm';
+    cancelBtn.style.marginTop = '10px';
+    cancelBtn.textContent = 'Cancelar esta marcação';
+    cancelBtn.addEventListener('click', async () => {
+      if (!confirm('Tens a certeza que queres cancelar esta marcação?')) return;
+      const { error: cancelErr } = await sb.rpc('cancel_my_appointment', { p_appointment_id: appt.id, p_phone: phone });
+      if (cancelErr) { alert('Não foi possível cancelar. Contacta a barbearia pelo WhatsApp.'); console.error(cancelErr); return; }
+      lookupMyBookings();
+    });
+    row.appendChild(cancelBtn);
+    resultsEl.appendChild(row);
+  });
+}
 
 async function init(){
   if (!sb) {

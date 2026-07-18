@@ -114,9 +114,29 @@
     </label>
     <div id="login-msg"></div>
     <button class="btn btn-primary" style="width:100%;" onclick="login()">Entrar</button>
+    <p style="margin-top:14px;">
+      <a href="#" onclick="toggleForgotPassword(); return false;" style="color:var(--brass); font-size:0.85rem; text-decoration:underline;">Esqueci-me da password</a>
+    </p>
+    <div id="forgot-password-panel" class="hidden" style="margin-top:10px; border-top:1px solid var(--brass-dim); padding-top:14px;">
+      <label>O teu email de admin
+        <input type="email" id="forgot-email">
+      </label>
+      <div id="forgot-msg"></div>
+      <button class="btn btn-ghost" style="width:100%;" onclick="sendPasswordReset()">Enviar link de recuperação</button>
+    </div>
     <p style="color:var(--ink-muted); font-size:0.78rem; margin-top:16px;">
       A tua conta cria-se no dashboard do Supabase, em Authentication → Users → Add user.
     </p>
+  </div>
+
+  <!-- Formulário para definir nova password, aparece só quando se vem do link de recuperação -->
+  <div class="login-card hidden" id="reset-password-view">
+    <h2>Nova password</h2>
+    <label>Nova password
+      <input type="password" id="new-password-input">
+    </label>
+    <div id="reset-msg"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="updatePassword()">Guardar nova password</button>
   </div>
 
   <div id="dashboard-view" class="hidden">
@@ -124,6 +144,8 @@
       <button class="tab-btn active" data-tab="agenda" onclick="switchTab('agenda')">Agenda</button>
       <button class="tab-btn" data-tab="relatorios" onclick="switchTab('relatorios')">Relatórios</button>
       <button class="tab-btn" data-tab="clientes" onclick="switchTab('clientes')">Clientes</button>
+      <button class="tab-btn" data-tab="assinantes" onclick="switchTab('assinantes')">Assinantes</button>
+      <button class="tab-btn" data-tab="catalogo" onclick="switchTab('catalogo')">Catálogo</button>
     </div>
 
     <section id="tab-agenda">
@@ -170,6 +192,55 @@
     <section id="tab-clientes" class="hidden">
       <div id="clients-list">A carregar…</div>
     </section>
+
+    <section id="tab-assinantes" class="hidden">
+      <button class="btn btn-ghost btn-sm" id="toggle-sub-form-btn" onclick="toggleSubForm()" style="margin-bottom:16px;">+ Nova assinatura</button>
+      <div class="manual-form hidden" id="sub-form">
+        <div class="form-grid">
+          <label>Nome do cliente
+            <input type="text" id="sub-client-name">
+          </label>
+          <label>Telemóvel
+            <input type="tel" id="sub-client-phone">
+          </label>
+          <label>Plano / Serviço
+            <select id="sub-service"></select>
+          </label>
+          <label>Início
+            <input type="date" id="sub-start-date">
+          </label>
+          <label>Validade até
+            <input type="date" id="sub-end-date">
+          </label>
+        </div>
+        <div id="sub-msg"></div>
+        <button class="btn btn-primary" onclick="submitSubscription()">Adicionar assinatura</button>
+      </div>
+      <div id="subscriptions-list">A carregar…</div>
+    </section>
+
+    <section id="tab-catalogo" class="hidden">
+      <button class="btn btn-ghost btn-sm" id="toggle-service-form-btn" onclick="toggleServiceForm()" style="margin-bottom:16px;">+ Novo serviço</button>
+      <div class="manual-form hidden" id="service-form">
+        <div class="form-grid">
+          <label>Nome do serviço
+            <input type="text" id="new-service-name">
+          </label>
+          <label>Categoria
+            <input type="text" id="new-service-category" placeholder="Ex: Corte, Barba...">
+          </label>
+          <label>Duração (minutos)
+            <input type="number" id="new-service-duration" value="30" step="5" min="5">
+          </label>
+          <label>Preço (€)
+            <input type="number" id="new-service-price" step="0.5" min="0">
+          </label>
+        </div>
+        <div id="new-service-msg"></div>
+        <button class="btn btn-primary" onclick="submitNewService()">Adicionar serviço</button>
+      </div>
+      <div id="catalog-list">A carregar…</div>
+    </section>
   </div>
 </div>
 
@@ -209,6 +280,47 @@ async function logout(){
   document.getElementById('logout-btn').classList.add('hidden');
 }
 
+function toggleForgotPassword(){
+  document.getElementById('forgot-password-panel').classList.toggle('hidden');
+}
+
+async function sendPasswordReset(){
+  const email = document.getElementById('forgot-email').value.trim();
+  const msgEl = document.getElementById('forgot-msg');
+  msgEl.innerHTML = '';
+  if (!email) { msgEl.innerHTML = '<div class="msg err">Escreve o teu email.</div>'; return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0].split('?')[0] });
+  if (error) { msgEl.innerHTML = '<div class="msg err">Não foi possível enviar o email.</div>'; console.error(error); return; }
+  msgEl.innerHTML = '<div class="msg ok">Email enviado! Verifica a tua caixa de entrada (e spam) e clica no link.</div>';
+}
+
+async function updatePassword(){
+  const newPassword = document.getElementById('new-password-input').value;
+  const msgEl = document.getElementById('reset-msg');
+  msgEl.innerHTML = '';
+  if (!newPassword || newPassword.length < 6) { msgEl.innerHTML = '<div class="msg err">A password deve ter pelo menos 6 caracteres.</div>'; return; }
+  const { error } = await sb.auth.updateUser({ password: newPassword });
+  if (error) { msgEl.innerHTML = '<div class="msg err">Não foi possível guardar. Tenta pedir um novo link.</div>'; console.error(error); return; }
+  msgEl.innerHTML = '<div class="msg ok">Password atualizada! A entrar…</div>';
+  setTimeout(() => {
+    document.getElementById('reset-password-view').classList.add('hidden');
+    showDashboard();
+  }, 1200);
+}
+
+// Quando se vem do link de recuperação de password, o Supabase acrescenta
+// "#access_token=...&type=recovery" ao URL — detetamos isso e mostramos
+// diretamente o formulário de nova password.
+if (sb) {
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('dashboard-view').classList.add('hidden');
+      document.getElementById('reset-password-view').classList.remove('hidden');
+    }
+  });
+}
+
 async function showDashboard(){
   document.getElementById('login-view').classList.add('hidden');
   document.getElementById('dashboard-view').classList.remove('hidden');
@@ -241,16 +353,24 @@ async function showDashboard(){
   svcSelect.innerHTML = services.map(s => `<option value="${s.id}">${s.name.split('|')[0].trim()} (${euro(s.price_eur)})</option>`).join('');
   const barberSelect = document.getElementById('manual-barber');
   barberSelect.innerHTML = barbers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+
+  const subServiceSelect = document.getElementById('sub-service');
+  subServiceSelect.innerHTML = services.map(s => `<option value="${s.id}">${s.name.split('|')[0].trim()}</option>`).join('');
+  document.getElementById('sub-start-date').value = new Date().toISOString().slice(0,10);
+  const in30 = new Date(); in30.setDate(in30.getDate()+30);
+  document.getElementById('sub-end-date').value = in30.toISOString().slice(0,10);
 }
 
 function euro(v){ return v === null || v === undefined ? 'a confirmar' : `€ ${Number(v).toFixed(0)}`; }
 
 function switchTab(tab){
-  ['agenda','relatorios','clientes'].forEach(t => {
+  ['agenda','relatorios','clientes','assinantes','catalogo'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     document.querySelector(`.tab-btn[data-tab="${t}"]`).classList.toggle('active', t === tab);
   });
   if (tab === 'clientes') loadClients();
+  if (tab === 'assinantes') loadSubscriptions();
+  if (tab === 'catalogo') loadCatalog();
 }
 
 function toggleManualForm(){
@@ -493,6 +613,145 @@ async function loadClients(){
       <div class="client-visits">${visitCounts[c.id] || 0} marcações</div>
     </div>
   `).join('');
+}
+
+function toggleSubForm(){
+  document.getElementById('sub-form').classList.toggle('hidden');
+}
+
+async function submitSubscription(){
+  const name = document.getElementById('sub-client-name').value.trim();
+  const phone = document.getElementById('sub-client-phone').value.trim();
+  const serviceId = document.getElementById('sub-service').value;
+  const startDate = document.getElementById('sub-start-date').value;
+  const endDate = document.getElementById('sub-end-date').value;
+  const msgEl = document.getElementById('sub-msg');
+  msgEl.innerHTML = '';
+
+  if (!name || !phone || !startDate || !endDate) {
+    msgEl.innerHTML = '<div class="msg err">Preenche nome, telemóvel e as datas.</div>';
+    return;
+  }
+
+  try {
+    let { data: existing } = await sb.from('clients').select('id').eq('phone', phone).maybeSingle();
+    let clientId = existing?.id;
+    if (!clientId) {
+      const { data: created, error } = await sb.from('clients').insert({ name, phone }).select('id').single();
+      if (error) throw error;
+      clientId = created.id;
+    }
+    const { error: subErr } = await sb.from('subscriptions').insert({
+      client_id: clientId, service_id: serviceId, start_date: startDate, end_date: endDate,
+    });
+    if (subErr) throw subErr;
+
+    document.getElementById('sub-client-name').value = '';
+    document.getElementById('sub-client-phone').value = '';
+    toggleSubForm();
+    loadSubscriptions();
+  } catch (err) {
+    console.error(err);
+    msgEl.innerHTML = '<div class="msg err">Erro ao adicionar a assinatura. Confirma se já correste a migration_02_features.sql no Supabase.</div>';
+  }
+}
+
+async function loadSubscriptions(){
+  const listEl = document.getElementById('subscriptions-list');
+  listEl.innerHTML = 'A carregar…';
+  const { data, error } = await sb
+    .from('subscriptions')
+    .select('*, clients(name,phone), services(name)')
+    .order('end_date', { ascending: true });
+
+  if (error) {
+    listEl.innerHTML = `<div class="msg err">Não consegui carregar assinantes. Confirma se já correste a migration_02_features.sql no Supabase.</div>`;
+    console.error(error);
+    return;
+  }
+  if (!data || data.length === 0) { listEl.innerHTML = '<p style="color:var(--ink-muted);">Ainda não há assinantes registados.</p>'; return; }
+
+  const today = new Date().toISOString().slice(0,10);
+  listEl.innerHTML = data.map(s => {
+    const isActive = s.end_date >= today;
+    return `
+      <div class="client-row">
+        <div class="client-avatar">${(s.clients?.name||'?').charAt(0).toUpperCase()}</div>
+        <div>
+          <div class="client-name">${s.clients?.name || ''}</div>
+          <div class="client-meta">${s.services?.name?.split('|')[0].trim() || ''} · ${s.clients?.phone || ''}</div>
+          <div class="client-meta">Validade: ${new Date(s.end_date+'T00:00:00').toLocaleDateString('pt-PT')}</div>
+        </div>
+        <div class="client-visits" style="color:${isActive ? 'var(--ok)' : 'var(--err)'};">${isActive ? 'Ativo' : 'Expirado'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleServiceForm(){
+  document.getElementById('service-form').classList.toggle('hidden');
+}
+
+async function submitNewService(){
+  const name = document.getElementById('new-service-name').value.trim();
+  const category = document.getElementById('new-service-category').value.trim() || 'Outros';
+  const duration = parseInt(document.getElementById('new-service-duration').value, 10) || 30;
+  const priceRaw = document.getElementById('new-service-price').value;
+  const price = priceRaw === '' ? null : parseFloat(priceRaw);
+  const msgEl = document.getElementById('new-service-msg');
+  msgEl.innerHTML = '';
+
+  if (!name) { msgEl.innerHTML = '<div class="msg err">Escreve o nome do serviço.</div>'; return; }
+
+  const { error } = await sb.from('services').insert({
+    name, category, duration_minutes: duration, price_eur: price, active: true, sort_order: 99,
+  });
+  if (error) { msgEl.innerHTML = '<div class="msg err">Erro ao adicionar o serviço.</div>'; console.error(error); return; }
+
+  document.getElementById('new-service-name').value = '';
+  document.getElementById('new-service-price').value = '';
+  toggleServiceForm();
+  const { data: refreshed } = await sb.from('services').select('*').order('category').order('sort_order');
+  services = refreshed || services;
+  loadCatalog();
+}
+
+async function loadCatalog(){
+  const listEl = document.getElementById('catalog-list');
+  listEl.innerHTML = 'A carregar…';
+  const { data, error } = await sb.from('services').select('*').order('category').order('sort_order');
+  if (error) { listEl.innerHTML = `<div class="msg err">Erro a carregar o catálogo.</div>`; console.error(error); return; }
+
+  services = data || [];
+  const byCategory = {};
+  services.forEach(s => { (byCategory[s.category] ||= []).push(s); });
+
+  listEl.innerHTML = Object.entries(byCategory).map(([cat, list]) => `
+    <div class="eyebrow" style="display:block; margin:18px 0 8px;">${cat}</div>
+    ${list.map(s => `
+      <div class="client-row" style="align-items:center;">
+        <div style="flex:1;">
+          <div class="client-name" style="${s.active ? '' : 'opacity:0.5; text-decoration:line-through;'}">${s.name.split('|')[0].trim()}</div>
+          <div class="client-meta">${s.duration_minutes} min</div>
+        </div>
+        <input type="number" value="${s.price_eur ?? ''}" placeholder="a confirmar" step="0.5" min="0"
+          style="width:90px;" onchange="updateServicePrice('${s.id}', this.value)">
+        <button class="btn btn-ghost btn-sm" onclick="toggleServiceActive('${s.id}', ${s.active})">${s.active ? 'Desativar' : 'Ativar'}</button>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+async function updateServicePrice(serviceId, value){
+  const price = value === '' ? null : parseFloat(value);
+  const { error } = await sb.from('services').update({ price_eur: price }).eq('id', serviceId);
+  if (error) { alert('Erro ao atualizar o preço.'); console.error(error); }
+}
+
+async function toggleServiceActive(serviceId, currentlyActive){
+  const { error } = await sb.from('services').update({ active: !currentlyActive }).eq('id', serviceId);
+  if (error) { alert('Erro ao atualizar o serviço.'); console.error(error); return; }
+  loadCatalog();
 }
 
 if (sb) {
