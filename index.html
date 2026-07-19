@@ -143,13 +143,13 @@
   /* ---------- barbers ---------- */
   .barbers{ display:grid; gap:18px; grid-template-columns:1fr; }
   @media (min-width:640px){ .barbers{ grid-template-columns:1fr 1fr; } }
-  .barber-card{ border:1px solid var(--brass-dim); background:var(--bg-alt); padding:26px; }
+  .barber-card{ border:1px solid var(--brass-dim); background:var(--bg-alt); padding:26px; text-align:center; }
   .barber-card .avatar{
-    width:100%; max-width:180px; aspect-ratio:3/4; border-radius:2px;
+    width:160px; height:160px; border-radius:50%;
     background:var(--bg-card); border:1px solid var(--brass-dim);
-    overflow:hidden; margin-bottom:16px;
+    overflow:hidden; margin:0 auto 16px;
   }
-  .barber-card .avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .barber-card .avatar img{ width:100%; height:100%; object-fit:cover; object-position:center center; display:block; }
   .barber-card h3{ font-size:1.25rem; }
   .barber-card p{ color:var(--ink-muted); font-size:0.92rem; margin-top:6px; }
 

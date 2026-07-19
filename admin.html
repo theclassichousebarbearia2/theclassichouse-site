@@ -321,6 +321,14 @@
     </section>
 
     <section id="tab-catalogo" class="hidden">
+      <div class="eyebrow" style="display:block; margin-bottom:10px;">Categorias</div>
+      <div id="categories-list" style="margin-bottom:18px;">A carregar…</div>
+      <div style="display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap;">
+        <input type="text" id="new-category-name" placeholder="Nome da nova categoria" style="flex:1; min-width:180px;">
+        <button class="btn btn-ghost btn-sm" onclick="submitNewCategory()">+ Adicionar categoria</button>
+      </div>
+      <div id="category-msg"></div>
+
       <button class="btn btn-ghost btn-sm" id="toggle-service-form-btn" onclick="toggleServiceForm()" style="margin-bottom:16px;">+ Novo serviço</button>
       <div class="manual-form hidden" id="service-form">
         <div class="form-grid">
@@ -328,12 +336,7 @@
             <input type="text" id="new-service-name">
           </label>
           <label>Categoria
-            <select id="new-service-category">
-              <option value="Corte de cabelo">Corte de cabelo</option>
-              <option value="Barba">Barba</option>
-              <option value="Cabelo e barba">Cabelo e barba</option>
-              <option value="Estética facial">Estética facial</option>
-            </select>
+            <select id="new-service-category"></select>
           </label>
           <label>Duração (minutos)
             <input type="number" id="new-service-duration" value="30" step="5" min="5">
@@ -699,7 +702,14 @@ async function submitManualAppointment(){
     loadAgenda(document.getElementById('agenda-date').value);
   } catch (err) {
     console.error(err);
-    msgEl.innerHTML = `<div class="msg err">${(err.message||'').includes('reservado') ? err.message : 'Erro ao adicionar a marcação.'}</div>`;
+    const raw = err.message || '';
+    let friendly = 'Erro ao adicionar a marcação.';
+    if (raw.includes('reservado')) {
+      friendly = raw;
+    } else if (raw.includes('Could not find the function') || err.code === 'PGRST202') {
+      friendly = 'A base de dados ainda não tem a versão mais recente da função book_appointment. Corre a migration_03_advanced.sql no SQL Editor do Supabase e tenta de novo.';
+    }
+    msgEl.innerHTML = `<div class="msg err">${friendly}</div>`;
   }
 }
 
@@ -933,11 +943,103 @@ async function deleteSubscription(subscriptionId){
   loadSubscriptions();
 }
 
+let categories = [];
+
+async function loadCategories(){
+  const { data, error } = await sb.from('categories').select('*').order('sort_order');
+  if (error) { console.error(error); return; }
+  categories = data || [];
+}
+
+function renderCategoriesList(){
+  const listEl = document.getElementById('categories-list');
+  if (categories.length === 0) { listEl.innerHTML = '<p style="color:var(--ink-muted);">Sem categorias ainda. Corre a migration_04_categories.sql no Supabase.</p>'; return; }
+
+  listEl.innerHTML = categories.map((c, i) => `
+    <div class="client-row" style="align-items:center;">
+      <div style="display:flex; flex-direction:column; gap:2px; margin-right:6px;">
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" title="Mover para cima"
+          ${i === 0 ? 'disabled' : ''} onclick="moveCategory('${c.name}','up')">▲</button>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" title="Mover para baixo"
+          ${i === categories.length - 1 ? 'disabled' : ''} onclick="moveCategory('${c.name}','down')">▼</button>
+      </div>
+      <div class="client-name" style="flex:1; ${c.active ? '' : 'opacity:0.5; text-decoration:line-through;'}">${c.name}</div>
+      <button class="btn btn-ghost btn-sm" onclick="renameCategory('${c.name}')">Renomear</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleCategoryActive('${c.name}', ${c.active})">${c.active ? 'Esconder do cliente' : 'Mostrar ao cliente'}</button>
+    </div>
+  `).join('');
+
+  const svcCatSelect = document.getElementById('new-service-category');
+  if (svcCatSelect) {
+    svcCatSelect.innerHTML = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  }
+}
+
+async function submitNewCategory(){
+  const nameInput = document.getElementById('new-category-name');
+  const name = nameInput.value.trim();
+  const msgEl = document.getElementById('category-msg');
+  msgEl.innerHTML = '';
+  if (!name) { msgEl.innerHTML = '<div class="msg err">Escreve o nome da categoria.</div>'; return; }
+
+  const nextOrder = categories.length ? Math.max(...categories.map(c => c.sort_order)) + 1 : 0;
+  const { error } = await sb.from('categories').insert({ name, sort_order: nextOrder });
+  if (error) { msgEl.innerHTML = '<div class="msg err">Erro ao adicionar. Talvez já exista uma categoria com este nome.</div>'; console.error(error); return; }
+
+  nameInput.value = '';
+  await loadCategories();
+  renderCategoriesList();
+}
+
+async function renameCategory(oldName){
+  const newName = prompt('Novo nome para esta categoria:', oldName);
+  if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+  const trimmed = newName.trim();
+
+  const { error: catErr } = await sb.from('categories').update({ name: trimmed }).eq('name', oldName);
+  if (catErr) { alert('Erro ao renomear a categoria.'); console.error(catErr); return; }
+
+  const { error: svcErr } = await sb.from('services').update({ category: trimmed }).eq('category', oldName);
+  if (svcErr) { alert('A categoria foi renomeada, mas houve um erro a atualizar os serviços.'); console.error(svcErr); }
+
+  await loadCategories();
+  renderCategoriesList();
+  loadCatalog();
+}
+
+async function toggleCategoryActive(name, currentlyActive){
+  const { error } = await sb.from('categories').update({ active: !currentlyActive }).eq('name', name);
+  if (error) { alert('Erro ao atualizar a categoria.'); console.error(error); return; }
+  await loadCategories();
+  renderCategoriesList();
+}
+
+async function moveCategory(name, direction){
+  const idx = categories.findIndex(c => c.name === name);
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= categories.length) return;
+
+  [categories[idx], categories[swapIdx]] = [categories[swapIdx], categories[idx]];
+  const updates = categories.map((c, i) => sb.from('categories').update({ sort_order: i }).eq('name', c.name));
+  const results = await Promise.all(updates);
+  const failed = results.find(r => r.error);
+  if (failed) { alert('Erro ao reordenar.'); console.error(failed.error); return; }
+
+  await loadCategories();
+  renderCategoriesList();
+}
+
+async function updateServiceCategory(serviceId, newCategory){
+  const { error } = await sb.from('services').update({ category: newCategory }).eq('id', serviceId);
+  if (error) { alert('Erro ao mudar a categoria do serviço.'); console.error(error); return; }
+  loadCatalog();
+}
+
 function toggleServiceForm(){ document.getElementById('service-form').classList.toggle('hidden'); }
 
 async function submitNewService(){
   const name = document.getElementById('new-service-name').value.trim();
-  const category = document.getElementById('new-service-category').value.trim() || 'Outros';
+  const category = document.getElementById('new-service-category').value;
   const duration = parseInt(document.getElementById('new-service-duration').value, 10) || 30;
   const priceRaw = document.getElementById('new-service-price').value;
   const price = priceRaw === '' ? null : parseFloat(priceRaw);
@@ -945,6 +1047,7 @@ async function submitNewService(){
   msgEl.innerHTML = '';
 
   if (!name) { msgEl.innerHTML = '<div class="msg err">Escreve o nome do serviço.</div>'; return; }
+  if (!category) { msgEl.innerHTML = '<div class="msg err">Cria pelo menos uma categoria primeiro.</div>'; return; }
 
   const { error } = await sb.from('services').insert({
     name, category, duration_minutes: duration, price_eur: price, active: true, sort_order: 99,
@@ -959,11 +1062,13 @@ async function submitNewService(){
   loadCatalog();
 }
 
-const CATEGORY_ORDER = ['Corte de cabelo', 'Barba', 'Cabelo e barba', 'Estética facial'];
-
 async function loadCatalog(){
   const listEl = document.getElementById('catalog-list');
   listEl.innerHTML = 'A carregar…';
+
+  await loadCategories();
+  renderCategoriesList();
+
   const { data, error } = await sb.from('services').select('*').order('category').order('sort_order');
   if (error) { listEl.innerHTML = `<div class="msg err">Erro a carregar o catálogo.</div>`; console.error(error); return; }
 
@@ -971,15 +1076,18 @@ async function loadCatalog(){
   const byCategory = {};
   services.forEach(s => { (byCategory[s.category] ||= []).push(s); });
 
-  const orderedCats = [
-    ...CATEGORY_ORDER.filter(c => byCategory[c]),
-    ...Object.keys(byCategory).filter(c => !CATEGORY_ORDER.includes(c)).sort(),
-  ];
+  const orderedCatNames = categories.length
+    ? [...categories.map(c => c.name), ...Object.keys(byCategory).filter(c => !categories.some(cat => cat.name === c))]
+    : Object.keys(byCategory).sort();
 
-  listEl.innerHTML = orderedCats.map(cat => {
+  const categoryOptionsHtml = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+  listEl.innerHTML = orderedCatNames.filter(cat => byCategory[cat]).map(cat => {
     const list = byCategory[cat];
+    const catMeta = categories.find(c => c.name === cat);
+    const hiddenNote = catMeta && !catMeta.active ? ' <span style="color:var(--err); font-size:0.72rem;">(escondida do cliente)</span>' : '';
     return `
-    <div class="eyebrow" style="display:block; margin:18px 0 8px;">${cat}</div>
+    <div class="eyebrow" style="display:block; margin:18px 0 8px;">${cat}${hiddenNote}</div>
     ${list.map((s, i) => `
       <div class="client-row" style="align-items:center;">
         <div style="display:flex; flex-direction:column; gap:2px; margin-right:6px;">
@@ -992,6 +1100,9 @@ async function loadCatalog(){
           <div class="client-name" style="${s.active ? '' : 'opacity:0.5; text-decoration:line-through;'}">${s.name.split('|')[0].trim()}</div>
           <div class="client-meta">${s.duration_minutes} min</div>
         </div>
+        <select style="width:150px;" onchange="updateServiceCategory('${s.id}', this.value)">
+          ${categoryOptionsHtml.replace(`value="${cat}"`, `value="${cat}" selected`)}
+        </select>
         <input type="number" value="${s.price_eur ?? ''}" placeholder="a confirmar" step="0.5" min="0"
           style="width:90px;" onchange="updateServicePrice('${s.id}', this.value)">
         <button class="btn btn-ghost btn-sm" onclick="toggleServiceActive('${s.id}', ${s.active})">${s.active ? 'Desativar' : 'Ativar'}</button>

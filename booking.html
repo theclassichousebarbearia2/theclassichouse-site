@@ -301,10 +301,11 @@ async function init(){
   }
 
   try {
-    const [svcRes, barRes, hrsRes] = await Promise.all([
+    const [svcRes, barRes, hrsRes, catRes] = await Promise.all([
       sb.from('services').select('*').eq('active', true).order('category').order('sort_order'),
       sb.from('barbers').select('*').eq('active', true),
       sb.from('business_hours').select('*'),
+      sb.from('categories').select('*').order('sort_order'),
     ]);
     if (svcRes.error) throw svcRes.error;
     if (barRes.error) throw barRes.error;
@@ -312,6 +313,10 @@ async function init(){
     state.services = svcRes.data;
     state.barbers = barRes.data;
     state.hours = hrsRes.data;
+    // Se a tabela categories já existir, só mostra serviços de categorias ativas,
+    // pela ordem escolhida no admin. Se ainda não existir (migration_04 por
+    // correr), mostra tudo, sem filtrar.
+    state.categories = (!catRes.error && catRes.data) ? catRes.data : null;
   } catch (err) {
     console.error(err);
     document.getElementById('services-list').innerHTML =
@@ -338,8 +343,17 @@ function renderServices(){
   const el = document.getElementById('services-list');
   const byCategory = {};
   state.services.forEach(s => { (byCategory[s.category] ||= []).push(s); });
+
+  let orderedCats;
+  if (state.categories && state.categories.length) {
+    orderedCats = state.categories.filter(c => c.active).map(c => c.name).filter(name => byCategory[name]);
+  } else {
+    orderedCats = Object.keys(byCategory);
+  }
+
   el.innerHTML = '';
-  Object.entries(byCategory).forEach(([cat, list]) => {
+  orderedCats.forEach(cat => {
+    const list = byCategory[cat];
     const label = document.createElement('div');
     label.className = 'category-label';
     label.textContent = cat;
@@ -516,14 +530,19 @@ async function submitBooking(){
       p_client_name: name,
       p_client_phone: phone,
       p_client_email: email || null,
+      p_barber_preference: state.selectedBarber ? 'specific' : 'any',
     });
     if (error) throw error;
     showSuccess(name);
   } catch (err) {
     console.error(err);
-    const friendly = (err.message && err.message.includes('reservado'))
-      ? err.message
-      : 'Não foi possível confirmar. Tenta novamente ou contacta pelo WhatsApp.';
+    const raw = err.message || '';
+    let friendly = 'Não foi possível confirmar. Tenta novamente ou contacta pelo WhatsApp.';
+    if (raw.includes('reservado')) {
+      friendly = raw;
+    } else if (raw.includes('Could not find the function') || err.code === 'PGRST202') {
+      friendly = 'A barbearia está a atualizar o sistema. Por favor contacta pelo WhatsApp para confirmar a marcação.';
+    }
     msgEl.innerHTML = `<div class="msg err">${friendly}</div>`;
     btn.disabled = false; btn.textContent = 'Confirmar marcação';
   }
