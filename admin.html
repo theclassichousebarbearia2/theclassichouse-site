@@ -517,7 +517,7 @@ async function showDashboard(){
   setupCalendarSwipe();
 
   const dateInput = document.getElementById('agenda-date');
-  dateInput.value = new Date().toISOString().slice(0,10);
+  dateInput.value = toLocalDateStr(new Date());
   if (!dateInput.dataset.listenerAttached) {
     dateInput.dataset.listenerAttached = '1';
     dateInput.addEventListener('change', () => loadAgenda(dateInput.value));
@@ -530,7 +530,7 @@ async function showDashboard(){
   barberSelect.innerHTML = barbers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
 
   const manualDateInput = document.getElementById('manual-date');
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = toLocalDateStr(new Date());
   manualDateInput.min = todayStr;
   manualDateInput.value = todayStr;
   svcSelect.addEventListener('change', renderManualSlots);
@@ -539,16 +539,22 @@ async function showDashboard(){
 
   const subServiceSelect = document.getElementById('sub-service');
   subServiceSelect.innerHTML = services.map(s => `<option value="${s.id}">${s.name.split('|')[0].trim()}</option>`).join('');
-  document.getElementById('sub-start-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sub-start-date').value = toLocalDateStr(new Date());
   const in30 = new Date(); in30.setDate(in30.getDate()+30);
-  document.getElementById('sub-end-date').value = in30.toISOString().slice(0,10);
+  document.getElementById('sub-end-date').value = toLocalDateStr(in30);
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = toLocalDateStr(new Date());
   document.getElementById('report-start-date').value = today;
   document.getElementById('report-end-date').value = today;
 }
 
 function euro(v){ return v === null || v === undefined ? 'a confirmar' : `€ ${Number(v).toFixed(0)}`; }
+function toLocalDateStr(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 
 function switchTab(tab){
   ['agenda','relatorios','clientes','assinantes','catalogo','marketing'].forEach(t => {
@@ -611,7 +617,7 @@ async function renderManualSlots(preferredMinutes){
   const openMin = timeStrToMinutes(hoursRow.open_time);
   const closeMin = timeStrToMinutes(hoursRow.close_time);
   const duration = service.duration_minutes;
-  const isToday = dateStr === new Date().toISOString().slice(0,10);
+  const isToday = dateStr === toLocalDateStr(new Date());
   const now = new Date();
   const slots = [];
 
@@ -881,7 +887,7 @@ function changeAgendaDay(deltaDays){
   const dateInput = document.getElementById('agenda-date');
   const current = new Date(dateInput.value + 'T00:00:00');
   current.setDate(current.getDate() + deltaDays);
-  dateInput.value = current.toISOString().slice(0,10);
+  dateInput.value = toLocalDateStr(current);
   loadAgenda(dateInput.value);
 }
 
@@ -932,7 +938,7 @@ function showApptDetail(appt, dateStr){
   barberSelect.innerHTML = barbers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
   barberSelect.value = appt.barber_id;
   document.getElementById('edit-preference').value = appt.barber_preference || 'any';
-  document.getElementById('edit-date').value = new Date(appt.start_time).toISOString().slice(0,10);
+  document.getElementById('edit-date').value = toLocalDateStr(new Date(appt.start_time));
   barberSelect.addEventListener('change', () => renderEditSlots());
   document.getElementById('edit-date').addEventListener('change', () => renderEditSlots());
 }
@@ -981,7 +987,7 @@ async function renderEditSlots(preferredMinutes){
 
   const openMin = timeStrToMinutes(hoursRow.open_time);
   const closeMin = timeStrToMinutes(hoursRow.close_time);
-  const isToday = dateStr === new Date().toISOString().slice(0,10);
+  const isToday = dateStr === toLocalDateStr(new Date());
   const now = new Date();
   const slots = [];
 
@@ -1317,7 +1323,7 @@ async function loadSubscriptions(){
   const usageCounts = {};
   (usageRows||[]).forEach(r => { usageCounts[r.subscription_id] = (usageCounts[r.subscription_id]||0) + 1; });
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = toLocalDateStr(new Date());
   listEl.innerHTML = data.map(s => {
     const isActive = s.end_date >= today;
     const used = usageCounts[s.id] || 0;
