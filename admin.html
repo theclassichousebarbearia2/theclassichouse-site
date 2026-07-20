@@ -518,7 +518,10 @@ async function showDashboard(){
 
   const dateInput = document.getElementById('agenda-date');
   dateInput.value = new Date().toISOString().slice(0,10);
-  dateInput.addEventListener('change', () => loadAgenda(dateInput.value));
+  if (!dateInput.dataset.listenerAttached) {
+    dateInput.dataset.listenerAttached = '1';
+    dateInput.addEventListener('change', () => loadAgenda(dateInput.value));
+  }
   loadAgenda(dateInput.value);
 
   const svcSelect = document.getElementById('manual-service');
@@ -861,7 +864,10 @@ async function loadAgenda(dateStr){
 
 function setupCalendarSwipe(){
   const areaEl = document.getElementById('calendar-area');
+  if (areaEl.dataset.swipeAttached) return;
+  areaEl.dataset.swipeAttached = '1';
   areaEl.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  areaEl.addEventListener('touchcancel', () => { touchStartX = null; }, { passive: true });
   areaEl.addEventListener('touchend', (e) => {
     if (touchStartX === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
