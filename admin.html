@@ -334,9 +334,10 @@
           <label>Telemóvel
             <input type="tel" id="sub-client-phone">
           </label>
-          <label>Plano / Serviço
+          <label>Serviço incluído na assinatura
             <select id="sub-service"></select>
           </label>
+          <div class="client-meta" style="margin:-8px 0 10px;">Escolhe o serviço real que o cliente vai marcar (ex: "Corte de Cabelo"). Não cries um serviço novo no Catálogo tipo "2x ao mês" — a periodicidade define-se abaixo, com a quantidade e as datas.</div>
           <label>Serviços incluídos
             <input type="number" id="sub-total-services" value="4" min="1">
           </label>
@@ -1303,6 +1304,8 @@ async function submitSubscription(){
   }
 }
 
+let editingSubscriptionId = null;
+
 async function loadSubscriptions(){
   const listEl = document.getElementById('subscriptions-list');
   listEl.innerHTML = 'A carregar…';
@@ -1326,20 +1329,51 @@ async function loadSubscriptions(){
   listEl.innerHTML = data.map(s => {
     const isActive = s.end_date >= today;
     const used = usageCounts[s.id] || 0;
+    const isEditing = editingSubscriptionId === s.id;
     return `
       <div class="client-row">
         <div class="client-avatar">${(s.clients?.name||'?').charAt(0).toUpperCase()}</div>
         <div style="flex:1;">
           <div class="client-name">${s.clients?.name || ''}</div>
-          <div class="client-meta">${s.services?.name?.split('|')[0].trim() || ''} · ${s.clients?.phone || ''}</div>
+          ${isEditing ? `
+            <div style="margin:6px 0;">
+              <select id="edit-sub-service-${s.id}">
+                ${services.map(sv => `<option value="${sv.id}" ${sv.id===s.service_id?'selected':''}>${sv.name.split('|')[0].trim()}</option>`).join('')}
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="saveSubscriptionService('${s.id}')">Guardar</button>
+              <button class="btn btn-ghost btn-sm" onclick="cancelEditSubscriptionService()">Cancelar</button>
+            </div>
+          ` : `
+            <div class="client-meta">${s.services?.name?.split('|')[0].trim() || ''} · ${s.clients?.phone || ''}</div>
+          `}
           <div class="client-meta">Usados: ${used} de ${s.total_services} · Validade: ${new Date(s.end_date+'T00:00:00').toLocaleDateString('pt-PT')}</div>
           <div class="client-meta">Código de acesso: <strong>${s.access_code}</strong></div>
         </div>
         <div class="client-visits" style="color:${isActive ? 'var(--ok)' : 'var(--err)'};">${isActive ? 'Ativo' : 'Expirado'}</div>
+        ${!isEditing ? `<button class="btn btn-ghost btn-sm" onclick="startEditSubscriptionService('${s.id}')">Editar serviço</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="deleteSubscription('${s.id}')">Apagar</button>
       </div>
     `;
   }).join('');
+}
+
+function startEditSubscriptionService(subscriptionId){
+  editingSubscriptionId = subscriptionId;
+  loadSubscriptions();
+}
+
+function cancelEditSubscriptionService(){
+  editingSubscriptionId = null;
+  loadSubscriptions();
+}
+
+async function saveSubscriptionService(subscriptionId){
+  const select = document.getElementById(`edit-sub-service-${subscriptionId}`);
+  const newServiceId = select.value;
+  const { error } = await sb.from('subscriptions').update({ service_id: newServiceId }).eq('id', subscriptionId);
+  if (error) { alert('Erro ao atualizar o serviço da assinatura.'); console.error(error); return; }
+  editingSubscriptionId = null;
+  loadSubscriptions();
 }
 
 async function deleteSubscription(subscriptionId){
